@@ -20,8 +20,6 @@ namespace RustIDE
         QScopedPointer<QTextEdit> _textEditor;
         QScopedPointer<QMenuBar> _menuBar;
 
-        using QMenuPtr = QScopedPointer<QMenu>;
-
         void assembleInterface();
         void fillMenu();
     };
