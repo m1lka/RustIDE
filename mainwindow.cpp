@@ -3,6 +3,7 @@
 #include <QMenu>
 #include <QDebug>
 #include <QApplication>
+#include <QStatusBar>
 
 namespace RustIDE
 {
@@ -31,12 +32,24 @@ namespace RustIDE
         try
         {
             fillMenu();
+
         } catch (const std::exception& ex)
         {
             qDebug() << ex.what();
         }
 
         _boxLayout->setMenuBar(_menuBar.get());
+        setupStatusBar();
+    }
+
+    void MainWindow::setupStatusBar()
+    {
+        _labelLine.reset(new QLabel(statusBar()));
+        _lableColumn.reset(new QLabel(statusBar()));
+        statusBar()->addWidget(_labelLine.get());
+        statusBar()->addWidget(_lableColumn.get());
+
+        _lableColumn->setText("Column: " + QString::number(_textEditor->textCursor().columnNumber()));
     }
 
     void MainWindow::fillMenu()

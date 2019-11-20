@@ -4,6 +4,9 @@
 #include <QTextEdit>
 #include <QHBoxLayout>
 #include <QMenuBar>
+#include <QLabel>
+#include <QTextDocument>
+#include <QTextCursor>
 
 namespace RustIDE
 {
@@ -20,7 +23,13 @@ namespace RustIDE
         QScopedPointer<QTextEdit> _textEditor;
         QScopedPointer<QMenuBar> _menuBar;
 
+        QScopedPointer<QTextDocument> _document;
+        QTextCursor _cursor;
+        QScopedPointer<QLabel> _labelLine;
+        QScopedPointer<QLabel> _lableColumn;
+
         void assembleInterface();
+        void setupStatusBar();
         void fillMenu();
     };
 }
