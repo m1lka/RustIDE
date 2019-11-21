@@ -31,5 +31,9 @@ namespace RustIDE
         void assembleInterface();
         void setupStatusBar();
         void fillMenu();
+
+    private Q_SLOTS:
+
+        void updateStatusBar();
     };
 }

@@ -46,10 +46,13 @@ namespace RustIDE
     {
         _labelLine.reset(new QLabel(statusBar()));
         _lableColumn.reset(new QLabel(statusBar()));
-        statusBar()->addWidget(_labelLine.get());
-        statusBar()->addWidget(_lableColumn.get());
+        statusBar()->addPermanentWidget(_labelLine.get());
+        statusBar()->addPermanentWidget(_lableColumn.get());
 
-        _lableColumn->setText("Column: " + QString::number(_textEditor->textCursor().columnNumber()));
+        connect(_textEditor.get(), SIGNAL(textChanged()), this, SLOT(updateStatusBar()));
+        connect(_textEditor.get(), SIGNAL(cursorPositionChanged()), this, SLOT(updateStatusBar()));
+
+        updateStatusBar();
     }
 
     void MainWindow::fillMenu()
@@ -65,11 +68,11 @@ namespace RustIDE
         curMenu->addAction("Выход", QApplication::quit);
 
         curMenu = _menuBar->addMenu("Правка");
-        curMenu->addAction("Вырезать");
-        curMenu->addAction("Копировать");
-        curMenu->addAction("Вставить");
+        curMenu->addAction("Вырезать", _textEditor.get(), SLOT(cut()));
+        curMenu->addAction("Копировать", _textEditor.get(), SLOT(copy()));
+        curMenu->addAction("Вставить", _textEditor.get(), SLOT(paste()));
         curMenu->addAction("Удалить");
-        curMenu->addAction("Выделить все");
+        curMenu->addAction("Выделить все", _textEditor.get(), SLOT(selectAll()));
 
         curMenu = _menuBar->addMenu("Вид");
         curMenu->addAction("Масштаб текста");
@@ -80,5 +83,12 @@ namespace RustIDE
 
         curMenu = _menuBar->addMenu("Свойства");
         curMenu->addAction("О программе");
+    }
+
+    void MainWindow::updateStatusBar()
+    {
+        auto cursore = _textEditor->textCursor();
+        _labelLine->setText("Line: " + QString::number(cursore.blockNumber()+1));
+        _lableColumn->setText("Col: " + QString::number(cursore.columnNumber()+1));
     }
 }
