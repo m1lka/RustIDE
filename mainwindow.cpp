@@ -85,7 +85,7 @@ namespace RustIDE
     void MainWindow::updateStatusBar()
     {
         auto cursore = _textEditor->textCursor();
-        _statusBarLabel->setText("Ln: " + QString::number(cursore.blockNumber()+1) + ", " +
-                                 "Col: " + QString::number(cursore.columnNumber()+1));
+        _statusBarLabel->setText("Ln: " + QString::number(cursore.blockNumber() + 1) + ", " +
+                                 "Col: " + QString::number(cursore.columnNumber() + 1));
     }
 }
