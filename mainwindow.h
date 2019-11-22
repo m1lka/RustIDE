@@ -25,15 +25,13 @@ namespace RustIDE
 
         QScopedPointer<QTextDocument> _document;
         QTextCursor _cursor;
-        QScopedPointer<QLabel> _labelLine;
-        QScopedPointer<QLabel> _lableColumn;
+        QScopedPointer<QLabel> _statusBarLabel;
 
         void assembleInterface();
         void setupStatusBar();
         void fillMenu();
 
     private Q_SLOTS:
-
         void updateStatusBar();
     };
 }
