@@ -32,7 +32,6 @@ namespace RustIDE
         try
         {
             fillMenu();
-
         } catch (const std::exception& ex)
         {
             qDebug() << ex.what();
@@ -44,10 +43,8 @@ namespace RustIDE
 
     void MainWindow::setupStatusBar()
     {
-        _labelLine.reset(new QLabel(statusBar()));
-        _lableColumn.reset(new QLabel(statusBar()));
-        statusBar()->addPermanentWidget(_labelLine.get());
-        statusBar()->addPermanentWidget(_lableColumn.get());
+        _statusBarLabel.reset(new QLabel(statusBar()));
+        statusBar()->addPermanentWidget(_statusBarLabel.get());
 
         connect(_textEditor.get(), SIGNAL(textChanged()), this, SLOT(updateStatusBar()));
         connect(_textEditor.get(), SIGNAL(cursorPositionChanged()), this, SLOT(updateStatusBar()));
@@ -88,7 +85,7 @@ namespace RustIDE
     void MainWindow::updateStatusBar()
     {
         auto cursore = _textEditor->textCursor();
-        _labelLine->setText("Line: " + QString::number(cursore.blockNumber()+1));
-        _lableColumn->setText("Col: " + QString::number(cursore.columnNumber()+1));
+        _statusBarLabel->setText("Ln: " + QString::number(cursore.blockNumber()+1) + ", " +
+                                 "Col: " + QString::number(cursore.columnNumber()+1));
     }
 }

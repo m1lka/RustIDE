@@ -3,10 +3,10 @@
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
+    QApplication app(argc, argv);
 
-    RustIDE::MainWindow m;
-    m.show();
+    RustIDE::MainWindow mainWindow;
+    mainWindow.show();
 
-    return a.exec();
+    return app.exec();
 }
