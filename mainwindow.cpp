@@ -4,11 +4,13 @@
 #include <QDebug>
 #include <QApplication>
 #include <QStatusBar>
+#include <QWheelEvent>
 
 namespace RustIDE
 {
     MainWindow::MainWindow(QWidget* parent):
-        QMainWindow(parent)
+        QMainWindow(parent),
+        _percentZoomText(100)
     {
         this->setMinimumSize(800, 600);
 
@@ -32,24 +34,51 @@ namespace RustIDE
         try
         {
             fillMenu();
-        } catch (const std::exception& ex)
+        }
+        catch (const std::exception& ex)
         {
             qDebug() << ex.what();
         }
 
         _boxLayout->setMenuBar(_menuBar.get());
+
         setupStatusBar();
+
+        _textEditor->installEventFilter(this);
     }
 
     void MainWindow::setupStatusBar()
     {
-        _statusBarLabel.reset(new QLabel(statusBar()));
-        statusBar()->addPermanentWidget(_statusBarLabel.get());
+        setupCursorPosition();
 
-        connect(_textEditor.get(), SIGNAL(textChanged()), this, SLOT(updateStatusBar()));
-        connect(_textEditor.get(), SIGNAL(cursorPositionChanged()), this, SLOT(updateStatusBar()));
+        setupZoomText();
+    }
 
-        updateStatusBar();
+    void MainWindow::setupCursorPosition()
+    {
+        _cursorePositionLabel.reset(new QLabel(statusBar()));
+        statusBar()->addPermanentWidget(_cursorePositionLabel.get());
+
+        connect(_textEditor.get(), &QTextEdit::textChanged, this, &MainWindow::updateCursorPositionInStatusBar);
+        connect(_textEditor.get(), &QTextEdit::cursorPositionChanged, this, &MainWindow::updateCursorPositionInStatusBar);
+
+        updateCursorPositionInStatusBar();
+    }
+
+    void MainWindow::setupZoomText()
+    {
+        _textScaleLabel.reset(new QLabel(statusBar()));
+        statusBar()->addPermanentWidget(_textScaleLabel.get());
+
+        _scZoomInText.reset(new QShortcut(_centralWidget.get()));
+        _scZoomInText->setKey(Qt::CTRL + Qt::Key_Plus);
+        connect(_scZoomInText.get(), &QShortcut::activated, this, [this](){updateZoomTextAndStatusBar(ZoomType::In);});
+
+        _scZoomOutText.reset(new QShortcut(_centralWidget.get()));
+        _scZoomOutText->setKey(Qt::CTRL + Qt::Key_Minus);
+        connect(_scZoomOutText.get(), &QShortcut::activated, this, [this](){updateZoomTextAndStatusBar(ZoomType::Out);});
+
+        updateZoomTextAndStatusBar();
     }
 
     void MainWindow::fillMenu()
@@ -65,15 +94,19 @@ namespace RustIDE
         curMenu->addAction("Выход", QApplication::quit);
 
         curMenu = _menuBar->addMenu("Правка");
-        curMenu->addAction("Вырезать", _textEditor.get(), SLOT(cut()));
-        curMenu->addAction("Копировать", _textEditor.get(), SLOT(copy()));
-        curMenu->addAction("Вставить", _textEditor.get(), SLOT(paste()));
+        curMenu->addAction("Вырезать", _textEditor.get(), &QTextEdit::cut);
+        curMenu->addAction("Копировать", _textEditor.get(), &QTextEdit::copy);
+        curMenu->addAction("Вставить", _textEditor.get(), &QTextEdit::paste);
+
         curMenu->addAction("Удалить");
-        curMenu->addAction("Выделить все", _textEditor.get(), SLOT(selectAll()));
+        curMenu->addAction("Выделить все", _textEditor.get(), &QTextEdit::selectAll);
 
         curMenu = _menuBar->addMenu("Вид");
-        curMenu->addAction("Масштаб текста");
-
+        {
+            auto subMenu = curMenu->addMenu("Масштаб текста");
+            subMenu->addAction("Увеличить", this, [&](){updateZoomTextAndStatusBar(ZoomType::In);});
+            subMenu->addAction("Уменьшить", this, [&](){updateZoomTextAndStatusBar(ZoomType::Out);});
+        }
         curMenu = _menuBar->addMenu("Поиск");
         curMenu->addAction("Найти");
         curMenu->addAction("Замена");
@@ -82,10 +115,56 @@ namespace RustIDE
         curMenu->addAction("О программе");
     }
 
-    void MainWindow::updateStatusBar()
+    void MainWindow::updateCursorPositionInStatusBar()
     {
         auto cursore = _textEditor->textCursor();
-        _statusBarLabel->setText("Ln: " + QString::number(cursore.blockNumber() + 1) + ", " +
+        _cursorePositionLabel->setText("Ln: " + QString::number(cursore.blockNumber() + 1) + ", " +
                                  "Col: " + QString::number(cursore.columnNumber() + 1));
+    }
+
+    void MainWindow::updateZoomTextAndStatusBar(ZoomType zoomFunctor)
+    {
+        switch (zoomFunctor)
+        {
+        case ZoomType::In:
+            _percentZoomText += 10;
+            _textEditor->zoomIn();
+            break;
+
+        case ZoomType::Out:
+            _percentZoomText -= 10;
+            if(_percentZoomText <= 20)
+                _percentZoomText = 20;
+            else
+                _textEditor->zoomOut();
+            break;
+
+        case ZoomType::OnlyUpdate:
+            break;
+        }
+
+        _textScaleLabel->setText("Масштаб: " + QString::number(_percentZoomText) + "%");
+    }
+
+    bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+    {
+        if(obj == _textEditor.get() && event->type() == QEvent::Wheel)
+        {
+            auto wheel = static_cast<QWheelEvent*>(event);
+            if(wheel->modifiers() == Qt::ControlModifier)
+            {
+                if(wheel->delta() > 0)
+                    updateZoomTextAndStatusBar(ZoomType::In);
+                else
+                    updateZoomTextAndStatusBar(ZoomType::Out);
+                return true;
+            }
+            else
+                return false;
+        }
+        else
+        {
+            return QMainWindow::eventFilter(obj, event);
+        }
     }
 }

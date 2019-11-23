@@ -5,8 +5,8 @@
 #include <QHBoxLayout>
 #include <QMenuBar>
 #include <QLabel>
-#include <QTextDocument>
 #include <QTextCursor>
+#include <QShortcut>
 
 namespace RustIDE
 {
@@ -23,15 +23,33 @@ namespace RustIDE
         QScopedPointer<QTextEdit> _textEditor;
         QScopedPointer<QMenuBar> _menuBar;
 
-        QScopedPointer<QTextDocument> _document;
         QTextCursor _cursor;
-        QScopedPointer<QLabel> _statusBarLabel;
+        QScopedPointer<QLabel> _cursorePositionLabel;
+
+        QScopedPointer<QShortcut> _scZoomInText;
+        QScopedPointer<QShortcut> _scZoomOutText;
+        QScopedPointer<QLabel> _textScaleLabel;
+        int _percentZoomText;
 
         void assembleInterface();
-        void setupStatusBar();
         void fillMenu();
+        void setupStatusBar();
+        void setupCursorePosition();
+        void setupZoomText();
+
+
+        bool eventFilter(QObject *obj, QEvent *event) override;
+
+        enum class ZoomType
+        {
+            In = 0,
+            Out = 1,
+            OnlyUpdate = 3
+        };
 
     private Q_SLOTS:
-        void updateStatusBar();
+        void updateCursorPositionInStatusBar();
+
+        void updateZoomTextAndStatusBar(ZoomType zoomFunctor = ZoomType::OnlyUpdate);
     };
 }
