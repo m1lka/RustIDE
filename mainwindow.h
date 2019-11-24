@@ -37,9 +37,9 @@ namespace RustIDE
         QScopedPointer<QShortcut> _scZoomOutText;
         QScopedPointer<QLabel> _textScaleLabel;
 
-        const int _minPercentZoomText;
-        const int _stepPercentZoomText;
-        int _percentZoomText;
+        const int _minPercentZoom;
+        const int _stepPercentZoom;
+        int _currentZoomPercent;
 
         void assembleInterface();
         void fillMenu();
@@ -53,6 +53,6 @@ namespace RustIDE
     private Q_SLOTS:
         void updateCursorPositionInStatusBar();
 
-        void updateZoomTextAndStatusBar(ZoomType zoomFunctor = ZoomType::None);
+        void updateZoomAndStatusBar(ZoomType zoomFunctor = ZoomType::None);
     };
 }

@@ -10,9 +10,9 @@ namespace RustIDE
 {
     MainWindow::MainWindow(QWidget* parent):
         QMainWindow(parent),
-        _minPercentZoomText(20),
-        _stepPercentZoomText(10),
-        _percentZoomText(100)
+        _minPercentZoom(20),
+        _stepPercentZoom(10),
+        _currentZoomPercent(100)
     {
         this->setMinimumSize(800, 600);
 
@@ -74,13 +74,13 @@ namespace RustIDE
 
         _scZoomInText.reset(new QShortcut(_centralWidget.get()));
         _scZoomInText->setKey(Qt::CTRL + Qt::Key_Plus);
-        connect(_scZoomInText.get(), &QShortcut::activated, this, [this](){updateZoomTextAndStatusBar(ZoomType::In);});
+        connect(_scZoomInText.get(), &QShortcut::activated, this, [this](){updateZoomAndStatusBar(ZoomType::In);});
 
         _scZoomOutText.reset(new QShortcut(_centralWidget.get()));
         _scZoomOutText->setKey(Qt::CTRL + Qt::Key_Minus);
-        connect(_scZoomOutText.get(), &QShortcut::activated, this, [this](){updateZoomTextAndStatusBar(ZoomType::Out);});
+        connect(_scZoomOutText.get(), &QShortcut::activated, this, [this](){updateZoomAndStatusBar(ZoomType::Out);});
 
-        updateZoomTextAndStatusBar();
+        updateZoomAndStatusBar();
     }
 
     void MainWindow::fillMenu()
@@ -106,8 +106,8 @@ namespace RustIDE
         curMenu = _menuBar->addMenu("Вид");
         {
             auto subMenu = curMenu->addMenu("Масштаб текста");
-            subMenu->addAction("Увеличить", this, [&](){updateZoomTextAndStatusBar(ZoomType::In);});
-            subMenu->addAction("Уменьшить", this, [&](){updateZoomTextAndStatusBar(ZoomType::Out);});
+            subMenu->addAction("Увеличить", this, [&](){updateZoomAndStatusBar(ZoomType::In);});
+            subMenu->addAction("Уменьшить", this, [&](){updateZoomAndStatusBar(ZoomType::Out);});
         }
         curMenu = _menuBar->addMenu("Поиск");
         curMenu->addAction("Найти");
@@ -124,19 +124,19 @@ namespace RustIDE
                                  "Col: " + QString::number(cursore.columnNumber() + 1));
     }
 
-    void MainWindow::updateZoomTextAndStatusBar(ZoomType zoomFunctor)
+    void MainWindow::updateZoomAndStatusBar(ZoomType zoomFunctor)
     {
         switch (zoomFunctor)
         {
         case ZoomType::In:
-            _percentZoomText += _stepPercentZoomText;
+            _currentZoomPercent += _stepPercentZoom;
             _textEditor->zoomIn();
             break;
 
         case ZoomType::Out:
-            _percentZoomText -= _stepPercentZoomText;
-            if(_percentZoomText <= _minPercentZoomText)
-                _percentZoomText = _minPercentZoomText;
+            _currentZoomPercent -= _stepPercentZoom;
+            if(_currentZoomPercent <= _minPercentZoom)
+                _currentZoomPercent = _minPercentZoom;
             else
                 _textEditor->zoomOut();
             break;
@@ -145,7 +145,7 @@ namespace RustIDE
             break;
         }
 
-        _textScaleLabel->setText("Масштаб: " + QString::number(_percentZoomText) + "%");
+        _textScaleLabel->setText("Масштаб: " + QString::number(_currentZoomPercent) + "%");
     }
 
     bool MainWindow::eventFilter(QObject *obj, QEvent *event)
@@ -156,9 +156,9 @@ namespace RustIDE
             if(wheel->modifiers() == Qt::ControlModifier)
             {
                 if(wheel->delta() > 0)
-                    updateZoomTextAndStatusBar(ZoomType::In);
+                    updateZoomAndStatusBar(ZoomType::In);
                 else
-                    updateZoomTextAndStatusBar(ZoomType::Out);
+                    updateZoomAndStatusBar(ZoomType::Out);
                 return true;
             }
             else
