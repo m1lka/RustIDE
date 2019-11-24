@@ -10,6 +10,8 @@ namespace RustIDE
 {
     MainWindow::MainWindow(QWidget* parent):
         QMainWindow(parent),
+        _minPercentZoomText(20),
+        _stepPercentZoomText(10),
         _percentZoomText(100)
     {
         this->setMinimumSize(800, 600);
@@ -49,9 +51,9 @@ namespace RustIDE
 
     void MainWindow::setupStatusBar()
     {
-        setupCursorPosition();
-
         setupZoomText();
+
+        setupCursorPosition();
     }
 
     void MainWindow::setupCursorPosition()
@@ -127,19 +129,19 @@ namespace RustIDE
         switch (zoomFunctor)
         {
         case ZoomType::In:
-            _percentZoomText += 10;
+            _percentZoomText += _stepPercentZoomText;
             _textEditor->zoomIn();
             break;
 
         case ZoomType::Out:
-            _percentZoomText -= 10;
-            if(_percentZoomText <= 20)
-                _percentZoomText = 20;
+            _percentZoomText -= _stepPercentZoomText;
+            if(_percentZoomText <= _minPercentZoomText)
+                _percentZoomText = _minPercentZoomText;
             else
                 _textEditor->zoomOut();
             break;
 
-        case ZoomType::OnlyUpdate:
+        case ZoomType::None:
             break;
         }
 

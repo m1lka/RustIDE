@@ -18,6 +18,13 @@ namespace RustIDE
         explicit MainWindow(QWidget *parent = nullptr);
 
     private:
+        enum class ZoomType
+        {
+            In = 0,
+            Out = 1,
+            None = 2
+        };
+
         QScopedPointer<QWidget> _centralWidget;
         QScopedPointer<QHBoxLayout> _boxLayout;
         QScopedPointer<QTextEdit> _textEditor;
@@ -29,27 +36,23 @@ namespace RustIDE
         QScopedPointer<QShortcut> _scZoomInText;
         QScopedPointer<QShortcut> _scZoomOutText;
         QScopedPointer<QLabel> _textScaleLabel;
+
+        const int _minPercentZoomText;
+        const int _stepPercentZoomText;
         int _percentZoomText;
 
         void assembleInterface();
         void fillMenu();
         void setupStatusBar();
-        void setupCursorePosition();
+        void setupCursorPosition();
         void setupZoomText();
 
 
         bool eventFilter(QObject *obj, QEvent *event) override;
 
-        enum class ZoomType
-        {
-            In = 0,
-            Out = 1,
-            OnlyUpdate = 3
-        };
-
     private Q_SLOTS:
         void updateCursorPositionInStatusBar();
 
-        void updateZoomTextAndStatusBar(ZoomType zoomFunctor = ZoomType::OnlyUpdate);
+        void updateZoomTextAndStatusBar(ZoomType zoomFunctor = ZoomType::None);
     };
 }
