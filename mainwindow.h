@@ -7,6 +7,7 @@
 #include <QLabel>
 #include <QTextCursor>
 #include <QShortcut>
+#include <QString>
 
 namespace RustIDE
 {
@@ -37,16 +38,27 @@ namespace RustIDE
         QScopedPointer<QShortcut> _scZoomOutText;
         QScopedPointer<QLabel> _textScaleLabel;
 
-        const int _minPercentZoom;
-        const int _stepPercentZoom;
+        QScopedPointer<QShortcut> _scCreateNewFile;
+        QScopedPointer<QShortcut> _scOpenFile;
+        QScopedPointer<QShortcut> _scSaveFile;
+        QScopedPointer<QShortcut> _scSaveFileAs;
+
+        const int _minZoomPercent;
+        const int _stepZoomPercent;
+        const QString _newFilename;
+
         int _currentZoomPercent;
+
+        QString _windowTitle;
+        QString _currentFileName;
+        bool _currentFileSaved;
 
         void assembleInterface();
         void fillMenu();
         void setupStatusBar();
         void setupCursorPosition();
         void setupZoomText();
-
+        void setupBaseShortcut();
 
         bool eventFilter(QObject *obj, QEvent *event) override;
 
@@ -54,5 +66,12 @@ namespace RustIDE
         void updateCursorPositionInStatusBar();
 
         void updateZoomAndStatusBar(ZoomType zoomFunctor = ZoomType::None);
+
+        void updateWindowTitle(bool currentFileSaved = true);
+
+        void createNewFile();
+        void openFile();
+        void saveFile();
+        void saveFileAs();
     };
 }

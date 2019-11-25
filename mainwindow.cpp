@@ -5,16 +5,22 @@
 #include <QApplication>
 #include <QStatusBar>
 #include <QWheelEvent>
+#include <QFileDialog>
+#include <QMessageBox>
 
 namespace RustIDE
 {
     MainWindow::MainWindow(QWidget* parent):
         QMainWindow(parent),
-        _minPercentZoom(20),
-        _stepPercentZoom(10),
-        _currentZoomPercent(100)
+        _minZoomPercent(20),
+        _stepZoomPercent(10),
+        _newFilename("new"),
+        _currentZoomPercent(100),
+        _windowTitle("RustIDE"),
+        _currentFileSaved(true)
     {
         this->setMinimumSize(800, 600);
+        this->setWindowTitle(_windowTitle);
 
         assembleInterface();
     }
@@ -47,6 +53,11 @@ namespace RustIDE
         setupStatusBar();
 
         _textEditor->installEventFilter(this);
+        connect(_textEditor.get(), &QTextEdit::textChanged, this, [&](){ updateWindowTitle(false); });
+
+        setupBaseShortcut();
+
+        createNewFile();
     }
 
     void MainWindow::setupStatusBar()
@@ -74,13 +85,32 @@ namespace RustIDE
 
         _scZoomInText.reset(new QShortcut(_centralWidget.get()));
         _scZoomInText->setKey(Qt::CTRL + Qt::Key_Plus);
-        connect(_scZoomInText.get(), &QShortcut::activated, this, [this](){updateZoomAndStatusBar(ZoomType::In);});
+        connect(_scZoomInText.get(), &QShortcut::activated, this, [this](){ updateZoomAndStatusBar(ZoomType::In); });
 
         _scZoomOutText.reset(new QShortcut(_centralWidget.get()));
         _scZoomOutText->setKey(Qt::CTRL + Qt::Key_Minus);
-        connect(_scZoomOutText.get(), &QShortcut::activated, this, [this](){updateZoomAndStatusBar(ZoomType::Out);});
+        connect(_scZoomOutText.get(), &QShortcut::activated, this, [this](){ updateZoomAndStatusBar(ZoomType::Out); });
 
         updateZoomAndStatusBar();
+    }
+
+    void MainWindow::setupBaseShortcut()
+    {
+        _scCreateNewFile.reset(new QShortcut(_centralWidget.get()));
+        _scCreateNewFile->setKey(Qt::CTRL + Qt::Key_T);
+        connect(_scCreateNewFile.get(), &QShortcut::activated, this, &MainWindow::createNewFile);
+
+        _scOpenFile.reset(new QShortcut(_centralWidget.get()));
+        _scOpenFile->setKey(Qt::CTRL + Qt::Key_O);
+        connect(_scOpenFile.get(), &QShortcut::activated, this, &MainWindow::openFile);
+
+        _scSaveFile.reset(new QShortcut(_centralWidget.get()));
+        _scSaveFile->setKey(Qt::CTRL + Qt::Key_S);
+        connect(_scSaveFile.get(), &QShortcut::activated, this, &MainWindow::saveFile);
+
+        _scSaveFileAs.reset(new QShortcut(_centralWidget.get()));
+        _scSaveFileAs->setKey(Qt::CTRL + Qt::SHIFT + Qt::Key_S);
+        connect(_scSaveFileAs.get(), &QShortcut::activated, this, &MainWindow::saveFileAs);
     }
 
     void MainWindow::fillMenu()
@@ -89,11 +119,11 @@ namespace RustIDE
             throw std::runtime_error("Не инициализирован _menuBar");
 
         auto curMenu =_menuBar->addMenu("Файл");
-        curMenu->addAction("Создать");
-        curMenu->addAction("Открыть");
-        curMenu->addAction("Сохранить");
-        curMenu->addAction("Сохранить как...");
-        curMenu->addAction("Выход", QApplication::quit);
+        curMenu->addAction("Создать", this, &MainWindow::createNewFile);
+        curMenu->addAction("Открыть", this, &MainWindow::openFile);
+        curMenu->addAction("Сохранить", this, &MainWindow::saveFile);
+        curMenu->addAction("Сохранить как...", this, &MainWindow::saveFileAs);
+        curMenu->addAction("Выход", this, [&](){ saveFile(); QApplication::quit(); });
 
         curMenu = _menuBar->addMenu("Правка");
         curMenu->addAction("Вырезать", _textEditor.get(), &QTextEdit::cut);
@@ -106,8 +136,8 @@ namespace RustIDE
         curMenu = _menuBar->addMenu("Вид");
         {
             auto subMenu = curMenu->addMenu("Масштаб текста");
-            subMenu->addAction("Увеличить", this, [&](){updateZoomAndStatusBar(ZoomType::In);});
-            subMenu->addAction("Уменьшить", this, [&](){updateZoomAndStatusBar(ZoomType::Out);});
+            subMenu->addAction("Увеличить", this, [&](){ updateZoomAndStatusBar(ZoomType::In); });
+            subMenu->addAction("Уменьшить", this, [&](){ updateZoomAndStatusBar(ZoomType::Out); });
         }
         curMenu = _menuBar->addMenu("Поиск");
         curMenu->addAction("Найти");
@@ -129,14 +159,14 @@ namespace RustIDE
         switch (zoomFunctor)
         {
         case ZoomType::In:
-            _currentZoomPercent += _stepPercentZoom;
+            _currentZoomPercent += _stepZoomPercent;
             _textEditor->zoomIn();
             break;
 
         case ZoomType::Out:
-            _currentZoomPercent -= _stepPercentZoom;
-            if(_currentZoomPercent <= _minPercentZoom)
-                _currentZoomPercent = _minPercentZoom;
+            _currentZoomPercent -= _stepZoomPercent;
+            if(_currentZoomPercent <= _minZoomPercent)
+                _currentZoomPercent = _minZoomPercent;
             else
                 _textEditor->zoomOut();
             break;
@@ -168,5 +198,108 @@ namespace RustIDE
         {
             return QMainWindow::eventFilter(obj, event);
         }
+    }
+
+    void MainWindow::updateWindowTitle(bool currentFileSaved)
+    {
+        _currentFileSaved = currentFileSaved;
+
+        auto newTitle = _windowTitle + ": [" + _currentFileName +
+                (!_currentFileSaved? "*]": "]");
+
+        this->setWindowTitle(newTitle);
+    }
+
+    void MainWindow::createNewFile()
+    {
+        // пока что так
+
+        if(!_currentFileSaved)
+        {
+            saveFile();
+        }
+
+        _textEditor->clear();
+        _currentFileName = _newFilename;
+
+        updateWindowTitle();
+    }
+
+    void MainWindow::openFile()
+    {
+        if(!_currentFileSaved)
+            saveFile();
+
+        QString filename = QFileDialog::getOpenFileName(this, "Открыть файл");
+        QFile file(filename);
+        _currentFileName = filename;
+
+        if(!file.open(QIODevice::ReadOnly | QFile::Text))
+        {
+            QMessageBox::warning(this, "Предупреждение", "Невозможно открыть файл: " + file.errorString());
+            _currentFileName.clear();
+            return;
+        }
+
+        QTextStream in(&file);
+        QString text = in.readAll();
+        _textEditor->setText(text);
+        file.close();
+
+        updateWindowTitle();
+    }
+
+    void MainWindow::saveFile()
+    {
+        if(_currentFileName == _newFilename)
+        {
+            saveFileAs();
+            return;
+        }
+
+        QString fileName;
+
+        if (_currentFileName.isEmpty()) {
+            fileName = QFileDialog::getSaveFileName(this, "Сохранить");
+            _currentFileName = fileName;
+        } else {
+            fileName = _currentFileName;
+        }
+
+        QFile file(fileName);
+        if (!file.open(QIODevice::WriteOnly | QFile::Text)) {
+            QMessageBox::warning(this, "Предупреждение", "Невозможно сохранить файл: " + file.errorString());
+            return;
+        }
+
+        QTextStream out(&file);
+        QString text = _textEditor->toPlainText();
+        out << text;
+
+        file.close();
+
+        updateWindowTitle();
+    }
+
+    void MainWindow::saveFileAs()
+    {
+        if(_textEditor->toPlainText().size() == 0)
+            return;
+
+        QString fileName = QFileDialog::getSaveFileName(this, "Сохранить как...");
+        QFile file(fileName);
+
+        if (!file.open(QFile::WriteOnly | QFile::Text)) {
+            QMessageBox::warning(this, "Предупреждение", "Невозможно сохранить файл: " + file.errorString());
+            return;
+        }
+
+        _currentFileName = fileName;
+        QTextStream out(&file);
+        QString text = _textEditor->toPlainText();
+        out << text;
+        file.close();
+
+        updateWindowTitle();
     }
 }
