@@ -111,6 +111,14 @@ namespace RustIDE
         _scSaveFileAs.reset(new QShortcut(_centralWidget.get()));
         _scSaveFileAs->setKey(Qt::CTRL + Qt::SHIFT + Qt::Key_S);
         connect(_scSaveFileAs.get(), &QShortcut::activated, this, &MainWindow::saveFileAs);
+
+        _scUndo.reset(new QShortcut(_centralWidget.get()));
+        _scUndo->setKey(Qt::CTRL + Qt::Key_Z);
+        connect(_scUndo.get(), &QShortcut::activated, _textEditor.get(), &QTextEdit::undo);
+
+        _scRedo.reset(new QShortcut(_centralWidget.get()));
+        _scRedo->setKey(Qt::CTRL + Qt::SHIFT + Qt::Key_Z);
+        connect(_scRedo.get(), &QShortcut::activated, _textEditor.get(), &QTextEdit::undo);
     }
 
     void MainWindow::fillMenu()
@@ -123,9 +131,12 @@ namespace RustIDE
         curMenu->addAction("Открыть", this, &MainWindow::openFile);
         curMenu->addAction("Сохранить", this, &MainWindow::saveFile);
         curMenu->addAction("Сохранить как...", this, &MainWindow::saveFileAs);
-        curMenu->addAction("Выход", this, [&](){ saveFile(); QApplication::quit(); });
+        curMenu->addAction("Выход", this, [&]() { exitApp(); });
 
         curMenu = _menuBar->addMenu("Правка");
+        curMenu->addAction("Отменить", _textEditor.get(), &QTextEdit::undo);
+        curMenu->addAction("Вернуть", _textEditor.get(), &QTextEdit::redo);
+        curMenu->addSeparator();
         curMenu->addAction("Вырезать", _textEditor.get(), &QTextEdit::cut);
         curMenu->addAction("Копировать", _textEditor.get(), &QTextEdit::copy);
         curMenu->addAction("Вставить", _textEditor.get(), &QTextEdit::paste);
@@ -189,6 +200,7 @@ namespace RustIDE
                     updateZoomAndStatusBar(ZoomType::In);
                 else
                     updateZoomAndStatusBar(ZoomType::Out);
+
                 return true;
             }
             else
@@ -198,6 +210,17 @@ namespace RustIDE
         {
             return QMainWindow::eventFilter(obj, event);
         }
+    }
+
+    bool MainWindow::event(QEvent *event)
+    {
+        if(event->type() == QEvent::Close)
+        {
+            exitApp(event);
+            return true;
+        }
+
+        return QMainWindow::event(event);
     }
 
     void MainWindow::updateWindowTitle(bool currentFileSaved)
@@ -301,5 +324,31 @@ namespace RustIDE
         file.close();
 
         updateWindowTitle();
+    }
+
+    void MainWindow::exitApp(QEvent *event)
+    {
+        QMessageBox question(_centralWidget.get());
+        question.setText("Выход");
+        question.setInformativeText("Вы хотите сохранить изменения в файле?");
+        question.setStandardButtons(QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        question.setIcon(QMessageBox::Information);
+        question.setDefaultButton(QMessageBox::Cancel);
+        auto res = question.exec();
+
+        switch (res)
+        {
+        case QMessageBox::Yes:
+            saveFile();
+            break;
+        case QMessageBox::No:
+            break;
+        case QMessageBox::Cancel:
+            if(event)
+                event->ignore();
+            return;
+        }
+
+        QApplication::quit();
     }
 }
