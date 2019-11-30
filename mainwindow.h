@@ -46,7 +46,6 @@ namespace RustIDE
         QScopedPointer<QShortcut> _scUndo;
         QScopedPointer<QShortcut> _scRedo;
 
-
         const int _minZoomPercent;
         const int _stepZoomPercent;
         const QString _newFilename;
@@ -55,7 +54,9 @@ namespace RustIDE
 
         QString _windowTitle;
         QString _currentFileName;
-        bool _currentFileSaved;
+        QString _settingsFilename;
+
+        bool _currentFileSaved;		
 
         void assembleInterface();
         void fillMenu();
@@ -66,6 +67,10 @@ namespace RustIDE
 
         bool eventFilter(QObject *obj, QEvent *event) override;
         bool event(QEvent *event) override;
+
+		void saveSettings();
+		bool loadSettings();
+        void openFileForName(QString filename);
 
     private Q_SLOTS:
         void updateCursorPositionInStatusBar();
@@ -78,6 +83,7 @@ namespace RustIDE
         void openFile();
         void saveFile();
         void saveFileAs();
+        void closeFile();
 
         void exitApp(QEvent *event = nullptr);
     };

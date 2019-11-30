@@ -7,6 +7,7 @@
 #include <QWheelEvent>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QSettings>
 
 namespace RustIDE
 {
@@ -22,7 +23,15 @@ namespace RustIDE
         this->setMinimumSize(800, 600);
         this->setWindowTitle(_windowTitle);
 
+        _settingsFilename = QString(QApplication::applicationDirPath() + "/settings.ini");
         assembleInterface();
+
+        if (loadSettings())
+            openFileForName(_currentFileName);
+        else
+            createNewFile();
+
+        updateWindowTitle(true);
     }
 
     void MainWindow::assembleInterface()
@@ -56,8 +65,6 @@ namespace RustIDE
         connect(_textEditor.get(), &QTextEdit::textChanged, this, [&](){ updateWindowTitle(false); });
 
         setupBaseShortcut();
-
-        createNewFile();
     }
 
     void MainWindow::setupStatusBar()
@@ -131,6 +138,7 @@ namespace RustIDE
         curMenu->addAction("Открыть", this, &MainWindow::openFile);
         curMenu->addAction("Сохранить", this, &MainWindow::saveFile);
         curMenu->addAction("Сохранить как...", this, &MainWindow::saveFileAs);
+        curMenu->addAction("Закрыть", this, &MainWindow::closeFile);
         curMenu->addAction("Выход", this, [&]() { exitApp(); });
 
         curMenu = _menuBar->addMenu("Правка");
@@ -188,6 +196,41 @@ namespace RustIDE
 
         _textScaleLabel->setText("Масштаб: " + QString::number(_currentZoomPercent) + "%");
     }
+
+	void MainWindow::saveSettings()
+	{
+        if(_currentFileName == _newFilename)
+            return;
+
+        QSettings settings(_settingsFilename, QSettings::IniFormat);
+        settings.setValue("lastOpenedFilename", _currentFileName);
+	}
+
+	bool MainWindow::loadSettings()
+	{
+        QSettings settings(_settingsFilename, QSettings::IniFormat);
+		_currentFileName = settings.value("lastOpenedFilename").toString();
+		return !_currentFileName.isEmpty();
+	}
+
+    void MainWindow::openFileForName(QString filename)
+	{
+		QFile file(filename);
+		_currentFileName = filename;
+
+		if (!file.open(QIODevice::ReadOnly | QFile::Text))
+		{
+			QMessageBox::warning(this, "Предупреждение", "Невозможно открыть файл: " + file.errorString());
+			_currentFileName.clear();
+			return;
+		}
+
+		QTextStream in(&file);
+		QString text = in.readAll();
+		_textEditor->setText(text);
+		file.close();
+	}
+
 
     bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     {
@@ -254,20 +297,8 @@ namespace RustIDE
             saveFile();
 
         QString filename = QFileDialog::getOpenFileName(this, "Открыть файл");
-        QFile file(filename);
-        _currentFileName = filename;
 
-        if(!file.open(QIODevice::ReadOnly | QFile::Text))
-        {
-            QMessageBox::warning(this, "Предупреждение", "Невозможно открыть файл: " + file.errorString());
-            _currentFileName.clear();
-            return;
-        }
-
-        QTextStream in(&file);
-        QString text = in.readAll();
-        _textEditor->setText(text);
-        file.close();
+        openFileForName(filename);
 
         updateWindowTitle();
     }
@@ -326,29 +357,42 @@ namespace RustIDE
         updateWindowTitle();
     }
 
+    void MainWindow::closeFile()
+    {
+        saveFile();
+
+        _textEditor->setText("");
+        _currentFileName = _newFilename;
+        updateWindowTitle(true);
+    }
+
     void MainWindow::exitApp(QEvent *event)
     {
-        QMessageBox question(_centralWidget.get());
-        question.setText("Выход");
-        question.setInformativeText("Вы хотите сохранить изменения в файле?");
-        question.setStandardButtons(QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
-        question.setIcon(QMessageBox::Information);
-        question.setDefaultButton(QMessageBox::Cancel);
-        auto res = question.exec();
-
-        switch (res)
+        if(!_currentFileSaved)
         {
-        case QMessageBox::Yes:
-            saveFile();
-            break;
-        case QMessageBox::No:
-            break;
-        case QMessageBox::Cancel:
-            if(event)
-                event->ignore();
-            return;
+            QMessageBox question(_centralWidget.get());
+            question.setText("Выход");
+            question.setInformativeText("Вы хотите сохранить изменения в файле?");
+            question.setStandardButtons(QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+            question.setIcon(QMessageBox::Information);
+            question.setDefaultButton(QMessageBox::Cancel);
+            auto res = question.exec();
+
+            switch (res)
+            {
+            case QMessageBox::Yes:
+                saveFile();
+                break;
+            case QMessageBox::No:
+                break;
+            case QMessageBox::Cancel:
+                if(event)
+                    event->ignore();
+                return;
+            }
         }
 
+		saveSettings();
         QApplication::quit();
     }
 }
